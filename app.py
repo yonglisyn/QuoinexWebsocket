@@ -5,7 +5,16 @@ from account import Account
 from product import Product
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 client = Quoinex(Account())
+
+@app.route('/fiat/<currency>')
+def fiat_balance(currency=None):
+    return client.get_fiat_account_balance(currency)
+
+@app.route('/crypto/<currency>')
+def crypto_balance(currency=None):
+    return client.get_crypto_account_balance(currency)
 
 @app.route('/')
 def index():
@@ -17,9 +26,9 @@ def index():
 @app.route('/trade', methods=['POST'])
 def trade():
     order = request.get_json()
-    print(order)
-    # resp = client.trade(order)
-    return jsonify(order)
+    resp = client.trade(order)
+    print(resp)
+    return jsonify(resp)
 
 if __name__ == "__main__":
     app.run()

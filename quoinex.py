@@ -8,6 +8,12 @@ class Quoinex:
     def __init__(self, account):
         self.token_id = account.token_id
         self.secret = account.secret
+
+    def get_fiat_accounts(self):
+        return json.loads(self._request(path='/fiat_accounts', is_private=True))
+
+    def get_crypto_accounts(self):
+        return json.loads(self._request(path='/crypto_accounts', is_private=True))
     
     def get_fiat_account_balance(self, currency):
         path = '/fiat_accounts'

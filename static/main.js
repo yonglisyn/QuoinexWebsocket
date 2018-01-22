@@ -14,7 +14,7 @@ var app = new Vue({
 				a_orderbooks[name] = {"sell":[], "buy":[]}
 				if(this.orderbooks[name]["sell"])
 				{
-					for(var i = 0; i<10; i++){
+					for(var i = 0; i<20; i++){
 						if(a_orderbooks[name]["sell"].length == 0){
 							a_orderbooks[name]["sell"].push([orderbooks[name]["sell"][i][0]*1, orderbooks[name]["sell"][i][1]*1, orderbooks[name]["sell"][i][0] * orderbooks[name]["sell"][i][1]])
 						}else{
@@ -28,7 +28,7 @@ var app = new Vue({
 				}
 				if(this.orderbooks[name]["buy"])
 				{
-					for(var i = 0; i<10; i++){
+					for(var i = 0; i<20; i++){
 						if(a_orderbooks[name]["buy"].length == 0){
 							a_orderbooks[name]["buy"].push([orderbooks[name]["buy"][i][0]*1, orderbooks[name]["buy"][i][1]*1, orderbooks[name]["buy"][i][0] * orderbooks[name]["buy"][i][1]])
 						}else{
@@ -50,7 +50,7 @@ var app = new Vue({
 			{
 				var amount = Math.ceil(this.accumulate_orderbooks["btcusd"]["buy"][0][0] * 0.001);
 				var from_sell, mid_buy, to_buy;
-				for(var i =0; i<10;i++){
+				for(var i =0; i<20;i++){
 					if(this.accumulate_orderbooks["qashusd"]["sell"][i][1] > amount){
 						var pre_total = 0, pre_amount = 0;
 						if(i==0){
@@ -66,7 +66,7 @@ var app = new Vue({
 						break;
 					}
 				}
-				for(var i =0; i<10;i++){
+				for(var i =0; i<20;i++){
 					if(this.accumulate_orderbooks["qashbtc"]["buy"][i][1] > amount){
 						var pre_total = 0, pre_amount = 0;
 						if(i==0){
@@ -97,7 +97,7 @@ var app = new Vue({
 			{
 				var amount = Math.ceil(this.accumulate_orderbooks["btcusd"]["sell"][0][0] * 0.001);
 				var to_sell, mid_sell, from_buy;
-				for(var i =0; i<10;i++){
+				for(var i =0; i<20;i++){
 					if(this.accumulate_orderbooks["qashusd"]["buy"][i][1] > amount){
 						var pre_total = 0, pre_amount = 0;
 						if(i==0){
@@ -113,7 +113,7 @@ var app = new Vue({
 						break;
 					}
 				}
-				for(var i =0; i<10;i++){
+				for(var i =0; i<20;i++){
 					if(this.accumulate_orderbooks["qashbtc"]["sell"][i][1] > amount){
 						var pre_total = 0, pre_amount = 0;
 						if(i==0){
@@ -173,7 +173,22 @@ var app = new Vue({
 					callback(data)
 				}
 			})
+		},
+		get_fiat_account:function(currency){
+			$.get("/fiat/"+currency, function(resp){
+				$("#"+currency.toLowerCase()).html(resp);
+			})
+		},
+		get_crypto_account: function(currency){
+			$.get("/crypto/"+currency, function(resp){
+				$("#"+currency.toLowerCase()).html(resp);
+			})
 		}
+	},
+	mounted: function(){
+		this.get_fiat_account('USD');
+		this.get_crypto_account('QASH');
+		this.get_crypto_account('BTC');
 	}
 })
 
