@@ -162,10 +162,11 @@ var app = new Vue({
 				var to_order = {"order":{"order_type": "market", "product_id": products["btcusd"], "side": "sell", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};
 				this.trade_history.push({time: this.date_string(), earning: earn_amount, type: "positive"});
 				this.earning = this.earning + earn_amount;
-				this.trade_in_sequence(from_order, mid_order, to_order);
-			}
-			if(this.is_auto){
-				setTimeout(this.positive_trade, this.auto_interval*1);
+				this.trade_in_sequence(from_order, mid_order, to_order, function(){
+					if(this.is_auto){
+						setTimeout(this.positive_trade, this.auto_interval*1);
+					}
+				});
 			}
 		},
 		negative_trade: function(){
@@ -179,13 +180,15 @@ var app = new Vue({
 				var from_order = {"order":{"order_type": "market", "product_id": products["qashusd"], "side": "sell", "quantity": from_amount, "price": 0}};
 				this.trade_history.push({time: this.date_string(), earning: earn_amount, type: "negative"});
 				this.earning = this.earning + earn_amount;
-				this.trade_in_sequence(to_order, mid_order, from_order);
+				this.trade_in_sequence(to_order, mid_order, from_order, function(){
+					if(this.is_auto){
+						setTimeout(this.negative_trade, this.auto_interval*1);
+					}
+				});
 			}
-			if(this.is_auto){
-				setTimeout(this.negative_trade, this.auto_interval*1);
-			}
+			
 		},
-		trade_in_sequence: function(order1, order2, order3){
+		trade_in_sequence: function(order1, order2, order3, callback){
 			var get_fiat_account = this.get_fiat_account;
 			data = this;
 			trade = this.trade;
@@ -194,6 +197,7 @@ var app = new Vue({
 					trade(order3, function(data_from_order){
 						get_fiat_account("USD");
 						data.is_in_trade = false;
+						callback();
 					})
 				})
 			})
@@ -279,3 +283,8 @@ pusher.allChannels().forEach(channel => {
 		app.$data.orderbooks = orderbooks;
 	})
 });
+
+// function playSound() {
+// 	var sound = document.getElementById("audio");
+// 	sound.play();
+// }
