@@ -5,6 +5,11 @@ var app = new Vue({
 	el: "#app",
 	data: {
 		orderbooks: {},
+		earning: 0,
+		trade_history: [],
+		is_in_trade: false,
+		is_auto: false,
+		auto_interval: 2000
 	},
 	computed: {
 		accumulate_orderbooks: function(){
@@ -48,7 +53,7 @@ var app = new Vue({
 				this.accumulate_orderbooks["qashbtc"] && this.accumulate_orderbooks["qashbtc"]["buy"].length &&
 				this.accumulate_orderbooks["btcusd"] && this.accumulate_orderbooks["btcusd"]["buy"].length)
 			{
-				var amount = Math.ceil(this.accumulate_orderbooks["btcusd"]["buy"][0][0] * 0.001);
+				var amount = Math.ceil(this.accumulate_orderbooks["btcusd"]["buy"][0][0] * 0.001 / this.accumulate_orderbooks["qashusd"]["sell"][0][0]);
 				var from_sell, mid_buy, to_buy;
 				for(var i =0; i<20;i++){
 					if(this.accumulate_orderbooks["qashusd"]["sell"][i][1] > amount){
@@ -95,7 +100,7 @@ var app = new Vue({
 				this.accumulate_orderbooks["qashbtc"] && this.accumulate_orderbooks["qashbtc"]["sell"].length &&
 				this.accumulate_orderbooks["btcusd"] && this.accumulate_orderbooks["btcusd"]["sell"].length)
 			{
-				var amount = Math.ceil(this.accumulate_orderbooks["btcusd"]["sell"][0][0] * 0.001);
+				var amount = Math.ceil(this.accumulate_orderbooks["btcusd"]["sell"][0][0] * 0.001 / this.accumulate_orderbooks["qashusd"]["buy"][0][0]);
 				var to_sell, mid_sell, from_buy;
 				for(var i =0; i<20;i++){
 					if(this.accumulate_orderbooks["qashusd"]["buy"][i][1] > amount){
@@ -147,16 +152,48 @@ var app = new Vue({
 	},
 	methods: {
 		positive_trade: function(){
-			var from_amount = this.exchange_positive["trade_amount"] * 1;
-			var mid_ave_price = this.exchange_positive["mid_ave_price"] * 1;
-			var from_order = {"order":{"order_type": "market", "product_id": products["qashusd"], "side": "buy", "quantity": from_amount, "price": 0}};			
-			var mid_order = {"order":{"order_type": "market", "product_id": products["qashbtc"], "side": "sell", "quantity": from_amount, "price": 0}};	
-			var to_order = {"order":{"order_type": "market", "product_id": products["btcusd"], "side": "sell", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};	
+			if(this.exchange_positive["ratio"] > 100.1){
+				this.is_in_trade = true;
+				var from_amount = this.exchange_positive["trade_amount"] * 1;
+				var mid_ave_price = this.exchange_positive["mid_ave_price"] * 1;
+				var earn_amount = (from_amount * mid_ave_price).toFixed(8) * this.exchange_positive["to_ave_price"] - from_amount * this.exchange_positive["from_ave_price"];
+				var from_order = {"order":{"order_type": "market", "product_id": products["qashusd"], "side": "buy", "quantity": from_amount, "price": 0}};			
+				var mid_order = {"order":{"order_type": "market", "product_id": products["qashbtc"], "side": "sell", "quantity": from_amount, "price": 0}};	
+				var to_order = {"order":{"order_type": "market", "product_id": products["btcusd"], "side": "sell", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};
+				this.trade_history.push({time: this.date_string(), earning: earn_amount, type: "positive"});
+				this.earning = this.earning + earn_amount;
+				this.trade_in_sequence(from_order, mid_order, to_order);
+			}
+			if(this.is_auto){
+				setTimeout(this.positive_trade, this.auto_interval*1);
+			}
+		},
+		negative_trade: function(){
+			if(this.exchange_negative["ratio"] > 100.1){
+				this.is_in_trade = true;
+				var from_amount = this.exchange_negative["trade_amount"] * 1;
+				var mid_ave_price = this.exchange_negative["mid_ave_price"] * 1;
+				var earn_amount = from_amount * this.exchange_negative["from_ave_price"] - (from_amount * mid_ave_price).toFixed(8) * this.exchange_negative["to_ave_price"];
+				var to_order = {"order":{"order_type": "market", "product_id": products["btcusd"], "side": "buy", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};	
+				var mid_order = {"order":{"order_type": "market", "product_id": products["qashbtc"], "side": "buy", "quantity": from_amount, "price": 0}};	
+				var from_order = {"order":{"order_type": "market", "product_id": products["qashusd"], "side": "sell", "quantity": from_amount, "price": 0}};
+				this.trade_history.push({time: this.date_string(), earning: earn_amount, type: "negative"});
+				this.earning = this.earning + earn_amount;
+				this.trade_in_sequence(to_order, mid_order, from_order);
+			}
+			if(this.is_auto){
+				setTimeout(this.negative_trade, this.auto_interval*1);
+			}
+		},
+		trade_in_sequence: function(order1, order2, order3){
+			var get_fiat_account = this.get_fiat_account;
+			data = this;
 			trade = this.trade;
-			trade(from_order, function(data_from_order){
-				trade(mid_order, function(data_mid_order){
-					trade(to_order, function(data_to_order){
-
+			trade(order1, function(data_to_order){
+				trade(order2, function(data_mid_order){
+					trade(order3, function(data_from_order){
+						get_fiat_account("USD");
+						data.is_in_trade = false;
 					})
 				})
 			})
@@ -183,12 +220,41 @@ var app = new Vue({
 			$.get("/crypto/"+currency, function(resp){
 				$("#"+currency.toLowerCase()).html(resp);
 			})
+		},
+		date_string: function(){
+			var myDate = new Date();  
+			return myDate.getHours() + ":" + myDate.getMinutes() + ":" + myDate.getSeconds() + ":" + myDate.getMilliseconds()
+		}
+	},
+	watch:{
+		exchange_positive: function(newEx, oldEx){
+			if(newEx["ratio"] > 100.1 && !this.is_in_trade && false){
+				console.log(newEx["ratio"]);
+				this.positive_trade();
+			}
+		},
+		exchange_negative: function(newEx, oldEx){
+			if(newEx["ratio"] > 100.1 && !this.is_in_trade && false){
+				console.log(newEx["ratio"]);
+				this.negative_trade();
+			}
+		},
+		is_in_trade: function(newEx, oldEx){
+			console.log(newEx);
+		},
+		is_auto: function(newEx, oldEx){
+			if(newEx){
+				this.positive_trade();
+				this.negative_trade();
+			}
 		}
 	},
 	mounted: function(){
 		this.get_fiat_account('USD');
 		this.get_crypto_account('QASH');
 		this.get_crypto_account('BTC');
+		
+
 	}
 })
 
