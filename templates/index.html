@@ -1,13 +1,14 @@
 <html>
 	<head>
-	<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.js"></script>
-	<script src="https://js.pusher.com/4.2/pusher.min.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/hmac-sha256.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/enc-base64-min.js"></script>
-	
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
-	<link rel="stylesheet" href="{{url_for('static', filename='style.css')}}" />
+		<title>Quoinex Trader</title>
+		<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.js"></script>
+		<script src="https://js.pusher.com/4.2/pusher.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/hmac-sha256.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/enc-base64-min.js"></script>
+		
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
+		<link rel="stylesheet" href="{{url_for('static', filename='style.css')}}" />
 	</head>
 	<body>
 		<div id="app" class="pl-3 pr-3">
@@ -16,76 +17,60 @@
 				<div class="col text-center bg-primary text-white" v-on:click="get_fiat_account('USD')">USD: <span id="usd"></span></div>
 				<div class="col text-center bg-warning text-white" v-on:click="get_crypto_account('QASH')">QASH: <span id="qash"></span></div>
 				<div class="col text-center bg-info text-white" v-on:click="get_crypto_account('BTC')">BTC: <span id="btc"></span></div>
+				<div class="col text-center bg-danger text-white" v-on:click="get_crypto_account('ETH')">ETH: <span id="eth"></span></div>
 			</div>
-			<div class="row mt-3">
-				<div class="col-md-12 text-center mb-2 font-weight-bold">QASHUSD-QASHBTC-BTCUSD <input type="checkbox" v-model="is_auto" title="Auto Mode"/> 
-					<select v-model="auto_interval" v-if="is_auto">
-						<option>1000</option>
-						<option>2000</option>
-						<option>3000</option>
-						<option>4000</option>
-						<option>5000</option>
-					</select>
-					<span class="bg-success text-white pl-1 pr-1 pb-1" v-if="is_auto" v-bind:class="['blink-'+auto_interval/1000]">Auto Mode</span>					  
-				</div>
-			</div>
-			<div class="row align-middle">
-				<div class="col-md-2 text-center">Positive</div>
-				<div class="col-md-3 text-center" v-text="exchange_positive['ratio']" 
-					v-bind:class="{'bg-success text-red': exchange_positive['ratio'] > 100, 'bg-warning text-white': exchange_positive['ratio'] <= 100}"></div>
-				<div class="col-md-3 text-center" v-text="exchange_positive['availabe_amount']"></div>
-				<div class="col-md-2 text-center" v-text="exchange_positive['trade_amount']"></div>
-				<div class="col-md-2">
-					<div class="btn btn-danger" v-on:click="positive_trade()">Trade</div>
-				</div>
-			</div>
-			<div class="row align-middle" style="margin-top: 5px;">
-				<div class="col-md-2 text-center">Negative</div>
-				<div class="col-md-3 text-center" v-text="exchange_negative['ratio']" 
-					v-bind:class="{'bg-success text-red': exchange_negative['ratio'] > 100, 'bg-warning text-white': exchange_negative['ratio'] <= 100}"></div>
-				<div class="col-md-3 text-center" v-text="exchange_negative['availabe_amount']"></div>
-				<div class="col-md-2 text-center" v-text="exchange_negative['trade_amount']"></div>
-				<div class="col-md-2">
-					<div class="btn btn-danger" v-on:click="negative_trade()">Trade</div>
-				</div>
-			</div>
-			<div class="row mt-4">
-				<div class="col-md-8">
-					<div class="row">
-						<div class="col text-center" v-for="(value, key) in orderbooks">
-							<div v-text="key" class="text-uppercase font-weight-bold"></div>
-							<div class="text-center row mt-2 mb-2">
-								<div class="col text-center text-uppercase">price</div>
-								<div class="col text-center text-uppercase">quantity</div>
-							</div>
-							<div class="row text-danger" v-for="order in value['sell'].slice(0, 9).reverse()">
-								<div class="col text-center" v-text="(order[0]*1).toFixed(8).toString()"></div>
-								<div class="col text-center" v-text="(order[1]*1).toFixed(8).toString()"></div>
-							</div>
-							{% raw %}
-								<div>spread: {{ ((value['sell'][0][0] - value['buy'][0][0]).toFixed(8)).toString() }}</div>
-							{% endraw %}
-							<div class="row text-success" v-for="order in value['buy'].slice(0, 9)">
-									<div class="col text-center" v-text="(order[0]*1).toFixed(8).toString()"></div>
-									<div class="col text-center" v-text="(order[1]*1).toFixed(8).toString()"></div>
-								</div>
+			<div class="row">
+				<div class="col-md-6" v-for="product_line in product_lines">
+					<div class="row mt-3">
+						<div class="col-md-12 text-center mb-2 font-weight-bold"><span v-text="product_line.key"></span> 
+							<input type="checkbox" v-model="product_line.is_auto" title="Auto Mode" v-on:click="toggleAuto(product_line)"/> 
+							<select v-model="product_line.auto_interval" v-if="product_line.is_auto">
+								<option>1000</option>
+								<option>2000</option>
+								<option>3000</option>
+								<option>4000</option>
+								<option>5000</option>
+							</select>
+							<span class="bg-success text-white pl-1 pr-1 pb-1" v-if="product_line.is_auto" v-bind:class="['blink-'+product_line.auto_interval/1000]">Auto Mode</span>					  
 						</div>
 					</div>
-				</div>
-				<div class="col-md-4" style="max-height: 520px; overflow-y: scroll;">
-					<div class="row">
-						<div class="text-left col">Earning: <span v-text="earning.toFixed(8)" v-bind:class="[earning > 0? 'text-success': 'text-danger']"></span></div>
-						<div class="text-left col"> Count: <span v-text="trade_history.length"></span></div>
+					<div class="row align-middle">
+						<div class="col-md-2 text-center">Positive</div>
+						<div class="col-md-3 text-center" v-text="exchange_positive[product_line.key]['ratio']" 
+							v-bind:class="{'bg-success text-red': exchange_positive[product_line.key]['ratio'] > 100, 'bg-warning text-white': exchange_positive[product_line.key]['ratio'] <= 100}"></div>
+						<div class="col-md-3 text-center" v-text="exchange_positive[product_line.key]['availabe_amount']"></div>
+						<div class="col-md-2 text-center" v-text="exchange_positive[product_line.key]['trade_amount']"></div>
+						<div class="col-md-2">
+							<div class="btn btn-danger" v-on:click="positive_trade(product_line)">Trade</div>
+						</div>
 					</div>
-					<div class="row">
-						<div class="col">Time</div>
-						<div class="col">Type</div>
-						<div class="col">Earning</div>
+					<div class="row align-middle" style="margin-top: 5px;">
+						<div class="col-md-2 text-center">Negative</div>
+						<div class="col-md-3 text-center" v-text="exchange_negative[product_line.key]['ratio']" 
+							v-bind:class="{'bg-success text-red': exchange_negative[product_line.key]['ratio'] > 100, 'bg-warning text-white': exchange_negative[product_line.key]['ratio'] <= 100}"></div>
+						<div class="col-md-3 text-center" v-text="exchange_negative[product_line.key]['availabe_amount']"></div>
+						<div class="col-md-2 text-center" v-text="exchange_negative[product_line.key]['trade_amount']"></div>
+						<div class="col-md-2">
+							<div class="btn btn-danger" v-on:click="negative_trade(product_line)">Trade</div>
+						</div>
 					</div>
-					<div v-for="value in trade_history.slice().reverse()" class="row" v-bind:class="[value.earning > 0 ? 'text-success' : 'text-danger']">
-						<div class="col" v-text="value.time"></div>
-						<div class="col" v-text="value.type"></div>
-						<div class="col" v-text="value.earning.toFixed(8)"></div>
+					<div class="row mt-4">
+						<div class="col" style="max-height: 520px; overflow-y: scroll;">
+							<div class="row">
+								<div class="text-left col">Earning: <span v-text="product_line.earning.toFixed(8)" v-bind:class="[product_line.earning > 0? 'text-success': 'text-danger']"></span></div>
+								<div class="text-left col"> Count: <span v-text="product_line.trade_history.length"></span></div>
+							</div>
+							<div class="row">
+								<div class="col">Time</div>
+								<div class="col">Type</div>
+								<div class="col">Earning</div>
+							</div>
+							<div v-for="value in product_line.trade_history.slice().reverse()" class="row" v-bind:class="[value.earning > 0 ? 'text-success' : 'text-danger']">
+								<div class="col" v-text="value.time"></div>
+								<div class="col" v-text="value.type"></div>
+								<div class="col" v-text="value.earning.toFixed(8)"></div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -94,7 +79,9 @@
 		<script>
 			var orderbooks = {"qashusd":{ "sell":{{ orderbooks["qashusd"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["qashusd"]["buy_price_levels"] | safe }} }, 
 							  "qashbtc":{ "sell":{{ orderbooks["qashbtc"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["qashbtc"]["buy_price_levels"] | safe }} },
-							  "btcusd":{ "sell":{{ orderbooks["btcusd"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["btcusd"]["buy_price_levels"] | safe }} }};
+							  "btcusd":{ "sell":{{ orderbooks["btcusd"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["btcusd"]["buy_price_levels"] | safe }} }, 
+							  "ethusd":{ "sell":{{ orderbooks["ethusd"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["ethusd"]["buy_price_levels"] | safe }} },
+							  "ethbtc":{ "sell":{{ orderbooks["ethbtc"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["ethbtc"]["buy_price_levels"] | safe }} } };
 		</script>
 		<script src="{{url_for('static', filename='main.js')}}"></script>
 	</body>

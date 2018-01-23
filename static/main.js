@@ -1,15 +1,11 @@
 
-var products = {"btcusd": 1, "qashbtc": 52, "qashusd": 57};
-var api_base = "https://api.quoine.com";
+var products = {"btcusd": 1, "ethusd": 27, "ethbtc": 37, "qashbtc": 52, "qashusd": 57};
 var app = new Vue({
 	el: "#app",
 	data: {
 		orderbooks: {},
-		earning: 0,
-		trade_history: [],
-		is_in_trade: false,
-		is_auto: false,
-		auto_interval: 2000
+		product_lines: [{key:"QASHUSD-QASHBTC-BTCUSD", from: "qashusd", mid: "qashbtc", to: "btcusd", is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
+						{key:"ETHUSD-ETHBTC-BTCUSD", from: "ethusd", mid: "ethbtc", to: "btcusd", is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4}]
 	},
 	computed: {
 		accumulate_orderbooks: function(){
@@ -17,7 +13,7 @@ var app = new Vue({
 			var orderbooks = this.orderbooks;
 			for(var name in orderbooks){
 				a_orderbooks[name] = {"sell":[], "buy":[]}
-				if(this.orderbooks[name]["sell"])
+				if(orderbooks[name]["sell"])
 				{
 					for(var i = 0; i<20; i++){
 						if(a_orderbooks[name]["sell"].length == 0){
@@ -49,97 +45,107 @@ var app = new Vue({
 			return a_orderbooks;
 		},
 		exchange_positive: function(){
-			if(this.accumulate_orderbooks["qashusd"] && this.accumulate_orderbooks["qashusd"]["sell"].length &&
-				this.accumulate_orderbooks["qashbtc"] && this.accumulate_orderbooks["qashbtc"]["buy"].length &&
-				this.accumulate_orderbooks["btcusd"] && this.accumulate_orderbooks["btcusd"]["buy"].length)
-			{
-				var amount = Math.ceil(this.accumulate_orderbooks["btcusd"]["buy"][0][0] * 0.001 / this.accumulate_orderbooks["qashusd"]["sell"][0][0]);
+			var scope = this;
+			var temp = {};
+			this.product_lines.map(function(product_line){
+				var from_sell_orderbook = scope.accumulate_orderbooks[product_line.from]["sell"];
+				var mid_buy_orderbook = scope.accumulate_orderbooks[product_line.mid]["buy"];
+				var to_buy_orderbook = scope.accumulate_orderbooks[product_line.to]["buy"];
+
+				var amount = scope.to_precision_decimal_ceil(to_buy_orderbook[0][0] * 0.001 / from_sell_orderbook[0][0], product_line.precision);
 				var from_sell, mid_buy, to_buy;
+				
 				for(var i =0; i<20;i++){
-					if(this.accumulate_orderbooks["qashusd"]["sell"][i][1] > amount){
+					if(from_sell_orderbook[i][1] > amount){
 						var pre_total = 0, pre_amount = 0;
 						if(i==0){
-							pre_total = this.accumulate_orderbooks["qashusd"]["sell"][i][2] * 1;
-							pre_amount = this.accumulate_orderbooks["qashusd"]["sell"][i][1] * 1;
+							pre_total = from_sell_orderbook[i][2] * 1;
+							pre_amount = from_sell_orderbook[i][1] * 1;
 						}else{
-							pre_total = this.accumulate_orderbooks["qashusd"]["sell"][i-1][2] * 1;
-							pre_amount = this.accumulate_orderbooks["qashusd"]["sell"][i-1][1] * 1;
+							pre_total = from_sell_orderbook[i-1][2] * 1;
+							pre_amount = from_sell_orderbook[i-1][1] * 1;
 						}
-						var current_amount = this.accumulate_orderbooks["qashusd"]["sell"][i][1];
-						var current_price = this.orderbooks["qashusd"]["sell"][i][0];
+						var current_amount = from_sell_orderbook[i][1];
+						var current_price = from_sell_orderbook[i][0];
 						from_sell = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount-pre_amount) * current_price)/amount};
 						break;
 					}
 				}
+				
 				for(var i =0; i<20;i++){
-					if(this.accumulate_orderbooks["qashbtc"]["buy"][i][1] > amount){
+					if(mid_buy_orderbook[i][1] > amount){
 						var pre_total = 0, pre_amount = 0;
 						if(i==0){
-							pre_total = this.accumulate_orderbooks["qashbtc"]["buy"][i][2] * 1;
-							pre_amount = this.accumulate_orderbooks["qashbtc"]["buy"][i][1] * 1;
+							pre_total = mid_buy_orderbook[i][2] * 1;
+							pre_amount = mid_buy_orderbook[i][1] * 1;
 						}else{
-							pre_total = this.accumulate_orderbooks["qashbtc"]["buy"][i-1][2] * 1;
-							pre_amount = this.accumulate_orderbooks["qashbtc"]["buy"][i-1][1] * 1;
+							pre_total = mid_buy_orderbook[i-1][2] * 1;
+							pre_amount = mid_buy_orderbook[i-1][1] * 1;
 						}
-						var current_amount = this.accumulate_orderbooks["qashbtc"]["buy"][i][1];
-						var current_price = this.orderbooks["qashbtc"]["buy"][i][0];
+						var current_amount = mid_buy_orderbook[i][1];
+						var current_price = mid_buy_orderbook[i][0];
 						mid_buy = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount - pre_amount) * current_price)/amount};
 						break;
 					}
 				}
-				to_buy = {"pre_total": this.accumulate_orderbooks["btcusd"]["buy"][2], "pre_amount": this.accumulate_orderbooks["btcusd"]["buy"][1], "ave_price": this.accumulate_orderbooks["btcusd"]["buy"][0][0]}
 				
-				return {"ratio": (100/from_sell["ave_price"]*mid_buy["ave_price"]*to_buy["ave_price"]).toFixed(8), 
-						"availabe_amount": Math.min(from_sell["current_amount"], mid_buy["current_amount"]).toFixed(8), 
-						"trade_amount": amount, "from_ave_price": from_sell["ave_price"], "mid_ave_price": mid_buy["ave_price"], "to_ave_price": to_buy["ave_price"]};
-			}
-			return {};
+				to_buy = {"pre_total": to_buy_orderbook[2], "pre_amount": to_buy_orderbook[1], "ave_price": to_buy_orderbook[0][0]}
+				
+				temp[product_line.key] = {"ratio": (100/from_sell["ave_price"]*mid_buy["ave_price"]*to_buy["ave_price"]).toFixed(8), 
+										  "availabe_amount": Math.min(from_sell["current_amount"], mid_buy["current_amount"]).toFixed(8), 
+										  "trade_amount": amount, "from_ave_price": from_sell["ave_price"], "mid_ave_price": mid_buy["ave_price"], "to_ave_price": to_buy["ave_price"]};
+			});
+			return temp;
 		},
 		exchange_negative: function(){
-			if(this.accumulate_orderbooks["qashusd"] && this.accumulate_orderbooks["qashusd"]["buy"].length &&
-				this.accumulate_orderbooks["qashbtc"] && this.accumulate_orderbooks["qashbtc"]["sell"].length &&
-				this.accumulate_orderbooks["btcusd"] && this.accumulate_orderbooks["btcusd"]["sell"].length)
-			{
-				var amount = Math.ceil(this.accumulate_orderbooks["btcusd"]["sell"][0][0] * 0.001 / this.accumulate_orderbooks["qashusd"]["buy"][0][0]);
+			var scope = this;
+			var temp = {};
+			this.product_lines.map(function(product_line){
+				var from_buy_orderbook = scope.accumulate_orderbooks[product_line.from]["buy"];
+				var mid_sell_orderbook = scope.accumulate_orderbooks[product_line.mid]["sell"];
+				var to_sell_orderbook = scope.accumulate_orderbooks[product_line.to]["sell"];
+
+				var amount = scope.to_precision_decimal_ceil(to_sell_orderbook[0][0] * 0.001 / from_buy_orderbook[0][0], product_line.precision);
 				var to_sell, mid_sell, from_buy;
 				for(var i =0; i<20;i++){
-					if(this.accumulate_orderbooks["qashusd"]["buy"][i][1] > amount){
+					if(from_buy_orderbook[i][1] > amount){
 						var pre_total = 0, pre_amount = 0;
 						if(i==0){
-							pre_total = this.accumulate_orderbooks["qashusd"]["buy"][i][2] * 1;
-							pre_amount = this.accumulate_orderbooks["qashusd"]["buy"][i][1] * 1;
+							pre_total = from_buy_orderbook[i][2] * 1;
+							pre_amount = from_buy_orderbook[i][1] * 1;
 						}else{
-							pre_total = this.accumulate_orderbooks["qashusd"]["buy"][i-1][2] * 1;
-							pre_amount = this.accumulate_orderbooks["qashusd"]["buy"][i-1][1] * 1;
+							pre_total = from_buy_orderbook[i-1][2] * 1;
+							pre_amount = from_buy_orderbook[i-1][1] * 1;
 						}
-						var current_amount = this.accumulate_orderbooks["qashusd"]["buy"][i][1];
-						var current_price = this.orderbooks["qashusd"]["buy"][i][0];
+						var current_amount = from_buy_orderbook[i][1];
+						var current_price = from_buy_orderbook[i][0];
 						from_buy = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount-pre_amount) * current_price)/amount};
 						break;
 					}
 				}
 				for(var i =0; i<20;i++){
-					if(this.accumulate_orderbooks["qashbtc"]["sell"][i][1] > amount){
+					if(mid_sell_orderbook[i][1] > amount){
 						var pre_total = 0, pre_amount = 0;
 						if(i==0){
-							pre_total = this.accumulate_orderbooks["qashbtc"]["sell"][i][2] * 1;
-							pre_amount = this.accumulate_orderbooks["qashbtc"]["sell"][i][1] * 1;
+							pre_total = mid_sell_orderbook[i][2] * 1;
+							pre_amount = mid_sell_orderbook[i][1] * 1;
 						}else{
-							pre_total = this.accumulate_orderbooks["qashbtc"]["sell"][i-1][2] * 1;
-							pre_amount = this.accumulate_orderbooks["qashbtc"]["sell"][i-1][1] * 1;
+							pre_total = mid_sell_orderbook[i-1][2] * 1;
+							pre_amount = mid_sell_orderbook[i-1][1] * 1;
 						}
-						var current_amount = this.accumulate_orderbooks["qashbtc"]["sell"][i][1];
-						var current_price = this.orderbooks["qashbtc"]["sell"][i][0];
+						var current_amount = mid_sell_orderbook[i][1];
+						var current_price = mid_sell_orderbook[i][0];
 						mid_sell = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount - pre_amount) * current_price)/amount};
 						break;
 					}
 				}
-				to_sell = {"pre_total": this.accumulate_orderbooks["btcusd"]["sell"][2], "pre_amount": this.accumulate_orderbooks["btcusd"]["sell"][1], "ave_price": this.accumulate_orderbooks["btcusd"]["sell"][0][0]}
-				return {"ratio": (100/to_sell["ave_price"]/mid_sell["ave_price"]*from_buy["ave_price"]).toFixed(8), 
+				to_sell = {"pre_total": to_sell_orderbook[2], "pre_amount": to_sell_orderbook[1], "ave_price": to_sell_orderbook[0][0]}
+				temp[product_line.key] = {"ratio": (100/to_sell["ave_price"]/mid_sell["ave_price"]*from_buy["ave_price"]).toFixed(8), 
 						"availabe_amount": Math.min(from_buy["current_amount"], mid_sell["current_amount"]).toFixed(8), 
 						"trade_amount": amount, "from_ave_price": from_buy["ave_price"], "mid_ave_price": mid_sell["ave_price"], "to_ave_price": to_sell["ave_price"]};
-			}
-			return {};
+			});
+				
+			return temp;
 		}
 	},
 	filters: {
@@ -151,38 +157,40 @@ var app = new Vue({
 		}
 	},
 	methods: {
-		positive_trade: function(){
-			if(this.exchange_positive["ratio"] > 100.1){
-				this.is_in_trade = true;
-				var from_amount = this.exchange_positive["trade_amount"] * 1;
-				var mid_ave_price = this.exchange_positive["mid_ave_price"] * 1;
-				var earn_amount = (from_amount * mid_ave_price).toFixed(8) * this.exchange_positive["to_ave_price"] - from_amount * this.exchange_positive["from_ave_price"];
-				var from_order = {"order":{"order_type": "market", "product_id": products["qashusd"], "side": "buy", "quantity": from_amount, "price": 0}};			
-				var mid_order = {"order":{"order_type": "market", "product_id": products["qashbtc"], "side": "sell", "quantity": from_amount, "price": 0}};	
-				var to_order = {"order":{"order_type": "market", "product_id": products["btcusd"], "side": "sell", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};
-				this.trade_history.push({time: this.date_string(), earning: earn_amount, type: "positive"});
-				this.earning = this.earning + earn_amount;
+		positive_trade: function(product_line){
+			var exchange = this.exchange_positive[product_line.key];
+			if(exchange["ratio"] > 100.1){
+				var from_amount = exchange["trade_amount"] * 1;
+				var mid_ave_price = exchange["mid_ave_price"] * 1;
+				var earn_amount = (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"] - from_amount * exchange["from_ave_price"];
+				var from_order = {"order":{"order_type": "market", "product_id": products[product_line.from], "side": "buy", "quantity": from_amount, "price": 0}};			
+				var mid_order = {"order":{"order_type": "market", "product_id": products[product_line.mid], "side": "sell", "quantity": from_amount, "price": 0}};	
+				var to_order = {"order":{"order_type": "market", "product_id": products[product_line.to], "side": "sell", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};
+				product_line.trade_history.push({time: this.date_string(), earning: earn_amount, type: "positive"});
+				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(from_order, mid_order, to_order, function(){
-					if(this.is_auto){
-						setTimeout(this.positive_trade, this.auto_interval*1);
+					if(product_line.is_auto){
+						setTimeout(this.positive_trade(product_line), product_line.auto_interval*1);
+						playSound();
 					}
 				});
 			}
 		},
-		negative_trade: function(){
-			if(this.exchange_negative["ratio"] > 100.1){
-				this.is_in_trade = true;
-				var from_amount = this.exchange_negative["trade_amount"] * 1;
-				var mid_ave_price = this.exchange_negative["mid_ave_price"] * 1;
-				var earn_amount = from_amount * this.exchange_negative["from_ave_price"] - (from_amount * mid_ave_price).toFixed(8) * this.exchange_negative["to_ave_price"];
-				var to_order = {"order":{"order_type": "market", "product_id": products["btcusd"], "side": "buy", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};	
-				var mid_order = {"order":{"order_type": "market", "product_id": products["qashbtc"], "side": "buy", "quantity": from_amount, "price": 0}};	
-				var from_order = {"order":{"order_type": "market", "product_id": products["qashusd"], "side": "sell", "quantity": from_amount, "price": 0}};
-				this.trade_history.push({time: this.date_string(), earning: earn_amount, type: "negative"});
-				this.earning = this.earning + earn_amount;
+		negative_trade: function(product_line){
+			var exchange = this.exchange_negative[product_line.key]
+			if(exchange["ratio"] > 100.1){
+				var from_amount = exchange["trade_amount"] * 1;
+				var mid_ave_price = exchange["mid_ave_price"] * 1;
+				var earn_amount = from_amount * exchange["from_ave_price"] - (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"];
+				var to_order = {"order":{"order_type": "market", "product_id": products[product_line.to], "side": "buy", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};	
+				var mid_order = {"order":{"order_type": "market", "product_id": products[product_line.mid], "side": "buy", "quantity": from_amount, "price": 0}};	
+				var from_order = {"order":{"order_type": "market", "product_id": products[product_line.from], "side": "sell", "quantity": from_amount, "price": 0}};
+				product_line.trade_history.push({time: this.date_string(), earning: earn_amount, type: "negative"});
+				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(to_order, mid_order, from_order, function(){
-					if(this.is_auto){
-						setTimeout(this.negative_trade, this.auto_interval*1);
+					if(product_line.is_auto){
+						setTimeout(this.negative_trade(product_line), product_line.auto_interval*1);
+						playSound();
 					}
 				});
 			}
@@ -190,13 +198,11 @@ var app = new Vue({
 		},
 		trade_in_sequence: function(order1, order2, order3, callback){
 			var get_fiat_account = this.get_fiat_account;
-			data = this;
 			trade = this.trade;
 			trade(order1, function(data_to_order){
 				trade(order2, function(data_mid_order){
 					trade(order3, function(data_from_order){
 						get_fiat_account("USD");
-						data.is_in_trade = false;
 						callback();
 					})
 				})
@@ -215,6 +221,12 @@ var app = new Vue({
 				}
 			})
 		},
+		toggleAuto: function(product_line){
+			if(product_line.is_auto){
+				this.positive_trade(product_line);
+				this.negative_trade(product_line);
+			}
+		},
 		get_fiat_account:function(currency){
 			$.get("/fiat/"+currency, function(resp){
 				$("#"+currency.toLowerCase()).html(resp);
@@ -228,37 +240,21 @@ var app = new Vue({
 		date_string: function(){
 			var myDate = new Date();  
 			return myDate.getHours() + ":" + myDate.getMinutes() + ":" + myDate.getSeconds() + ":" + myDate.getMilliseconds()
+		},
+		to_precision_decimal_ceil: function(value, precision){
+			return Math.ceil(value*Math.pow(10, precision))/Math.pow(10, precision);
 		}
 	},
 	watch:{
-		exchange_positive: function(newEx, oldEx){
-			if(newEx["ratio"] > 100.1 && !this.is_in_trade && false){
-				console.log(newEx["ratio"]);
-				this.positive_trade();
-			}
-		},
-		exchange_negative: function(newEx, oldEx){
-			if(newEx["ratio"] > 100.1 && !this.is_in_trade && false){
-				console.log(newEx["ratio"]);
-				this.negative_trade();
-			}
-		},
-		is_in_trade: function(newEx, oldEx){
-			console.log(newEx);
-		},
-		is_auto: function(newEx, oldEx){
-			if(newEx){
-				this.positive_trade();
-				this.negative_trade();
-			}
-		}
+	},
+	beforeMount:function(){
+		this.orderbooks = orderbooks;
 	},
 	mounted: function(){
 		this.get_fiat_account('USD');
 		this.get_crypto_account('QASH');
 		this.get_crypto_account('BTC');
-		
-
+		this.get_crypto_account('ETH');
 	}
 })
 
@@ -269,7 +265,7 @@ var pusher = new Pusher("2ff981bb060680b5ce97", {
 	disabledTransports: ["flash"]
 });
 
-for(var name in orderbooks){
+for(var name in products){
 	pusher.subscribe("price_ladders_cash_" + name + "_sell");
 	pusher.subscribe("price_ladders_cash_" + name + "_buy");
 }
@@ -284,7 +280,7 @@ pusher.allChannels().forEach(channel => {
 	})
 });
 
-// function playSound() {
-// 	var sound = document.getElementById("audio");
-// 	sound.play();
-// }
+function playSound() {
+	var sound = document.getElementById("audio");
+	sound.play();
+}
