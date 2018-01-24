@@ -18,12 +18,13 @@ def crypto_balance(currency=None):
 
 @app.route('/')
 def index():
-    qashusd_orderbook = client.get_orderbook(Product.QASHUSD)
-    qashbtc_orderbook = client.get_orderbook(Product.QASHBTC)
-    btcusd_orderbook = client.get_orderbook(Product.BTCUSD)
-    ethusd_orderbook = client.get_orderbook(Product.ETHUSD)
-    ethbtc_orderbook = client.get_orderbook(Product.ETHBTC)
-    return render_template('index.html', orderbooks = {"qashusd": qashusd_orderbook, "qashbtc": qashbtc_orderbook, "btcusd": btcusd_orderbook, "ethusd": ethusd_orderbook, "ethbtc": ethbtc_orderbook})
+    orderbooks = {}
+    products = {}
+    for product in Product:
+        orderbooks[product.name.lower()] = client.get_orderbook(product)
+        products[product.name.lower()] = product.value
+
+    return render_template('index.html', orderbooks = orderbooks, products = products)
 
 @app.route('/trade', methods=['POST'])
 def trade():

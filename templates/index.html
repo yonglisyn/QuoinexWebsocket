@@ -15,15 +15,17 @@
 			<div class="row">
 				<div class="col-md-12 text-center border-bottom-0 font-weight-bold mb-2">Account Summary</div>
 				<div class="col text-center bg-primary text-white" v-on:click="get_fiat_account('USD')">USD: <span id="usd"></span></div>
+				<div class="col text-center bg-success text-white" v-on:click="get_fiat_account('SGD')">SGD: <span id="sgd"></span></div>
+				<div class="col text-center bg-dark text-white" v-on:click="get_fiat_account('JPY')">JPY: <span id="jpy"></span></div>
 				<div class="col text-center bg-warning text-white" v-on:click="get_crypto_account('QASH')">QASH: <span id="qash"></span></div>
 				<div class="col text-center bg-info text-white" v-on:click="get_crypto_account('BTC')">BTC: <span id="btc"></span></div>
 				<div class="col text-center bg-danger text-white" v-on:click="get_crypto_account('ETH')">ETH: <span id="eth"></span></div>
 			</div>
 			<div class="row">
-				<div class="col-md-6" v-for="product_line in product_lines">
+				<div class="col-md-4" v-for="product_line in product_lines">
 					<div class="row mt-3">
 						<div class="col-md-12 text-center mb-2 font-weight-bold"><span v-text="product_line.key"></span> 
-							<input type="checkbox" v-model="product_line.is_auto" title="Auto Mode" v-on:click="toggleAuto(product_line)"/> 
+							<input type="checkbox" v-model="product_line.is_auto" v-on:change="toggleAuto(product_line)" title="Auto Mode"/> 
 							<select v-model="product_line.auto_interval" v-if="product_line.is_auto">
 								<option>1000</option>
 								<option>2000</option>
@@ -55,7 +57,7 @@
 						</div>
 					</div>
 					<div class="row mt-4">
-						<div class="col" style="max-height: 520px; overflow-y: scroll;">
+						<div class="col" style="height: 280px; overflow-y: scroll;">
 							<div class="row">
 								<div class="text-left col">Earning: <span v-text="product_line.earning.toFixed(8)" v-bind:class="[product_line.earning > 0? 'text-success': 'text-danger']"></span></div>
 								<div class="text-left col"> Count: <span v-text="product_line.trade_history.length"></span></div>
@@ -77,11 +79,8 @@
 		</div>
 		<audio id="audio" src="http://www.soundjay.com/button/beep-07.wav" autostart="false" ></audio>
 		<script>
-			var orderbooks = {"qashusd":{ "sell":{{ orderbooks["qashusd"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["qashusd"]["buy_price_levels"] | safe }} }, 
-							  "qashbtc":{ "sell":{{ orderbooks["qashbtc"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["qashbtc"]["buy_price_levels"] | safe }} },
-							  "btcusd":{ "sell":{{ orderbooks["btcusd"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["btcusd"]["buy_price_levels"] | safe }} }, 
-							  "ethusd":{ "sell":{{ orderbooks["ethusd"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["ethusd"]["buy_price_levels"] | safe }} },
-							  "ethbtc":{ "sell":{{ orderbooks["ethbtc"]["sell_price_levels"] | safe}}, "buy": {{ orderbooks["ethbtc"]["buy_price_levels"] | safe }} } };
+			var orderbooks = {{ orderbooks | safe }};
+			var products = {{ products | safe }};
 		</script>
 		<script src="{{url_for('static', filename='main.js')}}"></script>
 	</body>

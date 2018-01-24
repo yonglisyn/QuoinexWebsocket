@@ -1,11 +1,12 @@
 
-var products = {"btcusd": 1, "ethusd": 27, "ethbtc": 37, "qashbtc": 52, "qashusd": 57};
 var app = new Vue({
 	el: "#app",
 	data: {
 		orderbooks: {},
-		product_lines: [{key:"QASHUSD-QASHBTC-BTCUSD", from: "qashusd", mid: "qashbtc", to: "btcusd", is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
-						{key:"ETHUSD-ETHBTC-BTCUSD", from: "ethusd", mid: "ethbtc", to: "btcusd", is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4}]
+		product_lines: [{key:"QASHUSD-QASHBTC-BTCUSD", from: "qashusd", mid: "qashbtc", to: "btcusd", base_currency: "usd", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
+						{key:"ETHUSD-ETHBTC-BTCUSD", from: "ethusd", mid: "ethbtc", to: "btcusd", base_currency: "usd", multiplier: 1.2, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4},
+						{key:"ETHSGD-ETHBTC-BTCSGD", from: "ethsgd", mid: "ethbtc", to: "btcsgd", base_currency: "sgd", multiplier: 1.2, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4},
+						{key:"QASHJPY-QASHBTC-BTCJPY", from: "qashjpy", mid: "qashbtc", to: "btcjpy", base_currency: "jpy", multiplier: 1.1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0}]
 	},
 	computed: {
 		accumulate_orderbooks: function(){
@@ -52,7 +53,7 @@ var app = new Vue({
 				var mid_buy_orderbook = scope.accumulate_orderbooks[product_line.mid]["buy"];
 				var to_buy_orderbook = scope.accumulate_orderbooks[product_line.to]["buy"];
 
-				var amount = scope.to_precision_decimal_ceil(to_buy_orderbook[0][0] * 0.001 / from_sell_orderbook[0][0], product_line.precision);
+				var amount = scope.to_precision_decimal_ceil(to_buy_orderbook[0][0] * 0.001 / from_sell_orderbook[0][0] * product_line.multiplier, product_line.precision);
 				var from_sell, mid_buy, to_buy;
 				
 				for(var i =0; i<20;i++){
@@ -105,7 +106,7 @@ var app = new Vue({
 				var mid_sell_orderbook = scope.accumulate_orderbooks[product_line.mid]["sell"];
 				var to_sell_orderbook = scope.accumulate_orderbooks[product_line.to]["sell"];
 
-				var amount = scope.to_precision_decimal_ceil(to_sell_orderbook[0][0] * 0.001 / from_buy_orderbook[0][0], product_line.precision);
+				var amount = scope.to_precision_decimal_ceil(to_sell_orderbook[0][0] * 0.001 / from_buy_orderbook[0][0] * product_line.multiplier, product_line.precision);
 				var to_sell, mid_sell, from_buy;
 				for(var i =0; i<20;i++){
 					if(from_buy_orderbook[i][1] > amount){
@@ -159,8 +160,9 @@ var app = new Vue({
 	methods: {
 		positive_trade: function(product_line){
 			var exchange = this.exchange_positive[product_line.key];
+			var scope = this;
 			if(exchange["ratio"] > 100.1){
-				var from_amount = exchange["trade_amount"] * 1;
+				var from_amount = exchange["trade_amount"] * 1 * product_line.multiplier;
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
 				var earn_amount = (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"] - from_amount * exchange["from_ave_price"];
 				var from_order = {"order":{"order_type": "market", "product_id": products[product_line.from], "side": "buy", "quantity": from_amount, "price": 0}};			
@@ -169,17 +171,23 @@ var app = new Vue({
 				product_line.trade_history.push({time: this.date_string(), earning: earn_amount, type: "positive"});
 				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(from_order, mid_order, to_order, function(){
+					scope.get_fiat_account(product_line.base_currency.toUpperCase());
 					if(product_line.is_auto){
-						setTimeout(this.positive_trade(product_line), product_line.auto_interval*1);
-						playSound();
+						console.log(product_line.key, "positive");
+						setTimeout(function(){
+							scope.positive_trade(product_line);
+						}, product_line.auto_interval*1);
 					}
+					playSound();
 				});
 			}
+
 		},
 		negative_trade: function(product_line){
-			var exchange = this.exchange_negative[product_line.key]
+			var exchange = this.exchange_negative[product_line.key];
+			var scope = this;
 			if(exchange["ratio"] > 100.1){
-				var from_amount = exchange["trade_amount"] * 1;
+				var from_amount = exchange["trade_amount"];
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
 				var earn_amount = from_amount * exchange["from_ave_price"] - (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"];
 				var to_order = {"order":{"order_type": "market", "product_id": products[product_line.to], "side": "buy", "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};	
@@ -188,13 +196,22 @@ var app = new Vue({
 				product_line.trade_history.push({time: this.date_string(), earning: earn_amount, type: "negative"});
 				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(to_order, mid_order, from_order, function(){
+					scope.get_fiat_account(product_line.base_currency.toUpperCase());
 					if(product_line.is_auto){
-						setTimeout(this.negative_trade(product_line), product_line.auto_interval*1);
-						playSound();
+						console.log(product_line.key, "negative");
+						setTimeout(function(){
+							scope.negative_trade(product_line);
+						}, product_line.auto_interval*1);
 					}
+					playSound();
 				});
 			}
-			
+		},
+		toggleAuto: function(product_line){
+			if(product_line.is_auto){
+				this.positive_trade(product_line);
+				this.negative_trade(product_line);
+			}
 		},
 		trade_in_sequence: function(order1, order2, order3, callback){
 			var get_fiat_account = this.get_fiat_account;
@@ -202,7 +219,6 @@ var app = new Vue({
 			trade(order1, function(data_to_order){
 				trade(order2, function(data_mid_order){
 					trade(order3, function(data_from_order){
-						get_fiat_account("USD");
 						callback();
 					})
 				})
@@ -220,12 +236,6 @@ var app = new Vue({
 					callback(data)
 				}
 			})
-		},
-		toggleAuto: function(product_line){
-			if(product_line.is_auto){
-				this.positive_trade(product_line);
-				this.negative_trade(product_line);
-			}
 		},
 		get_fiat_account:function(currency){
 			$.get("/fiat/"+currency, function(resp){
@@ -245,16 +255,16 @@ var app = new Vue({
 			return Math.ceil(value*Math.pow(10, precision))/Math.pow(10, precision);
 		}
 	},
-	watch:{
-	},
 	beforeMount:function(){
 		this.orderbooks = orderbooks;
 	},
 	mounted: function(){
 		this.get_fiat_account('USD');
+		this.get_fiat_account('JPY');
 		this.get_crypto_account('QASH');
 		this.get_crypto_account('BTC');
 		this.get_crypto_account('ETH');
+		this.get_fiat_account('SGD');
 	}
 })
 

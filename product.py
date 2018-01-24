@@ -6,6 +6,7 @@ class Product(Enum):
     BTCSGD = 7
     ETHUSD = 27
     ETHJPY = 29
+    ETHSGD = 30
     ETHBTC = 37
     QASHJPY = 50
     QASHETH = 51    

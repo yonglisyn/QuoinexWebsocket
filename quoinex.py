@@ -36,8 +36,8 @@ class Quoinex:
         return json.loads(resp)
 
     def get_orderbook(self, product):
-        resp = self._request('/products/{0}/price_levels'.format(product.value))
-        return json.loads(resp)
+        resp = json.loads(self._request('/products/{0}/price_levels'.format(product.value)))
+        return {"sell": resp["sell_price_levels"], "buy": resp["buy_price_levels"]}
 
     def trade(self, order):
         content = self._request("/orders/", method='post', data=order, is_private=True)
