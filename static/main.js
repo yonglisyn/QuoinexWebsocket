@@ -161,6 +161,7 @@ var app = new Vue({
 		positive_trade: function(product_line){
 			var exchange = this.exchange_positive[product_line.key];
 			var scope = this;
+			console.log(product_line.key, "positive");
 			if(exchange["ratio"] > 100.1){
 				var from_amount = exchange["trade_amount"] * 1 * product_line.multiplier;
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
@@ -172,20 +173,25 @@ var app = new Vue({
 				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(from_order, mid_order, to_order, function(){
 					scope.get_fiat_account(product_line.base_currency.toUpperCase());
+					playSound();
 					if(product_line.is_auto){
-						console.log(product_line.key, "positive");
 						setTimeout(function(){
 							scope.positive_trade(product_line);
 						}, product_line.auto_interval*1);
 					}
-					playSound();
 				});
+			}else{
+				if(product_line.is_auto){
+					setTimeout(function(){
+						scope.positive_trade(product_line);
+					}, product_line.auto_interval*1);
+				}
 			}
-
 		},
 		negative_trade: function(product_line){
 			var exchange = this.exchange_negative[product_line.key];
 			var scope = this;
+			console.log(product_line.key, "negative");
 			if(exchange["ratio"] > 100.1){
 				var from_amount = exchange["trade_amount"];
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
@@ -197,14 +203,19 @@ var app = new Vue({
 				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(to_order, mid_order, from_order, function(){
 					scope.get_fiat_account(product_line.base_currency.toUpperCase());
+					playSound();
 					if(product_line.is_auto){
-						console.log(product_line.key, "negative");
 						setTimeout(function(){
 							scope.negative_trade(product_line);
-						}, product_line.auto_interval*1);
+						}, product_line.auto_interval*1)
 					}
-					playSound();
 				});
+			}else{
+				if(product_line.is_auto){
+					setTimeout(function(){
+						scope.negative_trade(product_line);
+					}, product_line.auto_interval*1)
+				}
 			}
 		},
 		toggleAuto: function(product_line){
