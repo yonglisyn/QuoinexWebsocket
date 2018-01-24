@@ -4,9 +4,11 @@ var app = new Vue({
 	data: {
 		orderbooks: {},
 		product_lines: [{key:"QASHUSD-QASHBTC-BTCUSD", from: "qashusd", mid: "qashbtc", to: "btcusd", base_currency: "usd", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
+						{key:"QASHUSD-QASHETH-ETHUSD", from: "qashusd", mid: "qasheth", to: "ethusd", base_currency: "usd", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
 						{key:"ETHUSD-ETHBTC-BTCUSD", from: "ethusd", mid: "ethbtc", to: "btcusd", base_currency: "usd", multiplier: 1.2, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4},
 						{key:"ETHSGD-ETHBTC-BTCSGD", from: "ethsgd", mid: "ethbtc", to: "btcsgd", base_currency: "sgd", multiplier: 1.2, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4},
-						{key:"QASHJPY-QASHBTC-BTCJPY", from: "qashjpy", mid: "qashbtc", to: "btcjpy", base_currency: "jpy", multiplier: 1.1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0}]
+						{key:"QASHJPY-QASHBTC-BTCJPY", from: "qashjpy", mid: "qashbtc", to: "btcjpy", base_currency: "jpy", multiplier: 1.1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
+					    {key:"ETHJPY-ETHBTC-BTCJPY", from: "ethjpy", mid: "ethbtc", to: "btcjpy", base_currency: "jpy", multiplier: 1.1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4}]
 	},
 	computed: {
 		accumulate_orderbooks: function(){
@@ -163,7 +165,7 @@ var app = new Vue({
 			var scope = this;
 			console.log(product_line.key, "positive");
 			if(exchange["ratio"] > 100.1){
-				var from_amount = exchange["trade_amount"] * 1 * product_line.multiplier;
+				var from_amount = exchange["trade_amount"] * 1;
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
 				var earn_amount = (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"] - from_amount * exchange["from_ave_price"];
 				var from_order = {"order":{"order_type": "market", "product_id": products[product_line.from], "side": "buy", "quantity": from_amount, "price": 0}};			
