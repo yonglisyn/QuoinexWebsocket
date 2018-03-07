@@ -1,14 +1,17 @@
 from enum import Enum
-
+# https://api.qryptos.com/orders?page=1&currency_pair_code=ETHBTC
+# https://api.qryptos.com/products
+# https://api.qryptos.com/orders?page=1&funding_currency=ETH&currency_pair_code=ETHBTC&status=live
+# https://api.qryptos.com/products/4
+# https://api.qryptos.com/crypto_accounts
 class Product(Enum):
-    BTCUSD = 1
-    BTCJPY = 5
-    BTCSGD = 7
-    ETHUSD = 27
-    ETHJPY = 29
-    ETHSGD = 30
-    ETHBTC = 37
-    QASHJPY = 50
-    QASHETH = 51    
-    QASHBTC = 52
-    QASHUSD = 57
+    QASHETH = 31
+    QASHBTC = 32
+    SPHTXETH = 47
+    SPHTXBTC = 48 
+    SPHTXQASH = 49
+    RKTETH = 89
+    RKTBTC = 108
+    RKTQASH = 109
+    
+    #SPHTXQASH-SPHTXETH-QASHETH

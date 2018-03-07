@@ -3,12 +3,8 @@ var app = new Vue({
 	el: "#app",
 	data: {
 		orderbooks: {},
-		product_lines: [{key:"QASHUSD-QASHBTC-BTCUSD", from: "qashusd", mid: "qashbtc", to: "btcusd", base_currency: "usd", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
-						{key:"QASHUSD-QASHETH-ETHUSD", from: "qashusd", mid: "qasheth", to: "ethusd", base_currency: "usd", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
-						{key:"ETHUSD-ETHBTC-BTCUSD", from: "ethusd", mid: "ethbtc", to: "btcusd", base_currency: "usd", multiplier: 1.2, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4},
-						{key:"ETHSGD-ETHBTC-BTCSGD", from: "ethsgd", mid: "ethbtc", to: "btcsgd", base_currency: "sgd", multiplier: 1.2, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4},
-						{key:"QASHJPY-QASHBTC-BTCJPY", from: "qashjpy", mid: "qashbtc", to: "btcjpy", base_currency: "jpy", multiplier: 1.1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 0},
-					    {key:"ETHJPY-ETHBTC-BTCJPY", from: "ethjpy", mid: "ethbtc", to: "btcjpy", base_currency: "jpy", multiplier: 1.1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 4}]
+		//{key:"SPHTXQASH-SPHTXETH-QASHETH", from: "SPHTXQASH", mid: "SPHTXETH", to: "QASHETH", base_currency: "qash", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 9}
+		product_lines: [{key:"SPHTXETH-SPHTXQASH-QASHETH", from: "SPHTXETH", mid: "SPHTXQASH", to: "QASHETH", base_currency: "eth", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 9}]
 	},
 	computed: {
 		accumulate_orderbooks: function(){
@@ -174,7 +170,7 @@ var app = new Vue({
 				product_line.trade_history.push({time: this.date_string(), earning: earn_amount, type: "positive"});
 				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(from_order, mid_order, to_order, function(){
-					scope.get_fiat_account(product_line.base_currency.toUpperCase());
+					scope.get_crypto_account(product_line.base_currency.toUpperCase());
 					playSound();
 					if(product_line.is_auto){
 						setTimeout(function(){
@@ -204,7 +200,7 @@ var app = new Vue({
 				product_line.trade_history.push({time: this.date_string(), earning: earn_amount, type: "negative"});
 				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(to_order, mid_order, from_order, function(){
-					scope.get_fiat_account(product_line.base_currency.toUpperCase());
+					scope.get_crypto_account(product_line.base_currency.toUpperCase());
 					playSound();
 					if(product_line.is_auto){
 						setTimeout(function(){
@@ -227,7 +223,7 @@ var app = new Vue({
 			}
 		},
 		trade_in_sequence: function(order1, order2, order3, callback){
-			var get_fiat_account = this.get_fiat_account;
+			var get_crypto_account = this.get_crypto_account;
 			trade = this.trade;
 			trade(order1, function(data_to_order){
 				trade(order2, function(data_mid_order){
@@ -250,11 +246,6 @@ var app = new Vue({
 				}
 			})
 		},
-		get_fiat_account:function(currency){
-			$.get("/fiat/"+currency, function(resp){
-				$("#"+currency.toLowerCase()).html(resp);
-			})
-		},
 		get_crypto_account: function(currency){
 			$.get("/crypto/"+currency, function(resp){
 				$("#"+currency.toLowerCase()).html(resp);
@@ -272,12 +263,11 @@ var app = new Vue({
 		this.orderbooks = orderbooks;
 	},
 	mounted: function(){
-		this.get_fiat_account('USD');
-		this.get_fiat_account('JPY');
 		this.get_crypto_account('QASH');
+		this.get_crypto_account('RKT');
+		this.get_crypto_account('SPHTX');
 		this.get_crypto_account('BTC');
 		this.get_crypto_account('ETH');
-		this.get_fiat_account('SGD');
 	}
 })
 

@@ -1,16 +1,13 @@
 from flask import render_template, Flask, url_for, jsonify, request, json
 import requests
-from quoinex import Quoinex
+from qryptos import Qryptos
 from account import Account
 from product import Product
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-client = Quoinex(Account())
+client = Qryptos(Account())
 
-@app.route('/fiat/<currency>')
-def fiat_balance(currency=None):
-    return client.get_fiat_account_balance(currency)
 
 @app.route('/crypto/<currency>')
 def crypto_balance(currency=None):
@@ -28,6 +25,7 @@ def index():
 
 @app.route('/trade', methods=['POST'])
 def trade():
+    return
     order = request.get_json()
     resp = client.trade(order)
     print(resp)

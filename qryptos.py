@@ -1,28 +1,18 @@
-import requests, jwt, math
+import requests, math
 import time
 import json
+import jwt
 
-class Quoinex:
-    api_base = 'https://api.quoine.com'
+class Qryptos:
+    api_base = 'https://api.qryptos.com'
 
     def __init__(self, account):
         self.token_id = account.token_id
         self.secret = account.secret
 
-    def get_fiat_accounts(self):
-        return json.loads(self._request(path='/fiat_accounts', is_private=True))
-
     def get_crypto_accounts(self):
         return json.loads(self._request(path='/crypto_accounts', is_private=True))
     
-    def get_fiat_account_balance(self, currency):
-        path = '/fiat_accounts'
-        fiat_list = json.loads(self._request(path, is_private = True))
-        for x in fiat_list:
-            if x['currency'] == currency:
-                return x['balance']
-        return None
-
     def get_crypto_account_balance(self, currency):
         path = '/crypto_accounts'
         crypto_list = json.loads(self._request(path, is_private = True))
@@ -40,6 +30,7 @@ class Quoinex:
         return {"sell": resp["sell_price_levels"], "buy": resp["buy_price_levels"]}
 
     def trade(self, order):
+        return
         content = self._request("/orders/", method='post', data=order, is_private=True)
         return json.loads(content)
 
