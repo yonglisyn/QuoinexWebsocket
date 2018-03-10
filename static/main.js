@@ -1,10 +1,37 @@
 
+// increase sphtx
+// sell SQ sell QE buy SE
+// sell SE buy QE buy SQ
+
+// sell sphtx to qash
+// sell qash to eth
+// buy sphtx with eth
+
+// increase eth
+// buy SE sell SQ sell QE
+// buy QE buy SQ sell SE
+
+// buy sphtx with eth
+// sell sphtx to qash
+// sell cash to eth
+
+
+// increase qash
+// buy SQ sell SE buy QE
+// sell QE buy SE sell SQ
+
+// buy 200 SPHTX with qash
+// sell 200 SPHTX to ETH
+// Buy qash with eth
+
+
 var app = new Vue({
 	el: "#app",
 	data: {
 		orderbooks: {},
+		initamounts: {qash:1,sphtx:1,eth:0.01,rkt:1},
 		//{key:"SPHTXQASH-SPHTXETH-QASHETH", from: "SPHTXQASH", mid: "SPHTXETH", to: "QASHETH", base_currency: "qash", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 9}
-		product_lines: [{key:"SPHTXETH-SPHTXQASH-QASHETH", from: "sphtxeth", mid: "sphtxqash", to: "qasheth", base_currency: "eth", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 9,exchange_pattern:["sell","buy","buy"]}]
+		product_lines: []
 	},
 	computed: {
 		accumulate_orderbooks: function(){
@@ -48,22 +75,20 @@ var app = new Vue({
 			var temp = {};
 			this.product_lines.map(function(product_line){
 				var target ='';
-				target = product_line.exchange_pattern[0];
+				target = scope.opposite_target(product_line.exchange_pattern[0]);
 				var from_orderbook = scope.accumulate_orderbooks[product_line.from][target];
-				target = product_line.exchange_pattern[1];
+				target = scope.opposite_target(product_line.exchange_pattern[1]);
 				var mid_orderbook = scope.accumulate_orderbooks[product_line.mid][target];
-				target = product_line.exchange_pattern[2];
+				target = scope.opposite_target(product_line.exchange_pattern[2]);
 				var to_orderbook = scope.accumulate_orderbooks[product_line.to][target];
-
-
-				var amount = scope.to_precision_decimal_ceil(to_orderbook[0][0] * 0.001 / from_orderbook[0][0] * product_line.multiplier, product_line.precision);
+				var amount = scope.init_amount(product_line.base_currency);
 				var from_exchange, mid_exchange, to_exchange;
 				
 				from_exchange = scope.get_market_summary(from_orderbook,amount);
 				mid_exchange = scope.get_market_summary(mid_orderbook,amount);
-				to_exchange = {"pre_total": to_orderbook[2], "pre_amount": to_orderbook[1], "ave_price": to_orderbook[0][0]}
+				to_exchange = {"pre_total": to_orderbook[2]*1, "pre_amount": to_orderbook[1]*1, "ave_price": to_orderbook[0][0]*1}
 				
-				temp[product_line.key] = {"ratio": (scope.calculate_ratio(0.15,product_line.exchange_pattern,[from_exchange, mid_exchange, to_exchange])).toFixed(8), 
+				temp[product_line.key] = {"ratio": (scope.calculate_ratio(product_line.exchange_pattern,[from_exchange, mid_exchange, to_exchange])).toFixed(8), 
 										  "availabe_amount": Math.min(from_exchange["current_amount"], mid_exchange["current_amount"]).toFixed(8), 
 										  "trade_amount": amount, "from_ave_price": from_exchange["ave_price"], "mid_ave_price": mid_exchange["ave_price"], "to_ave_price": to_exchange["ave_price"]};
 			});
@@ -116,7 +141,7 @@ var app = new Vue({
 				
 				to_buy = {"pre_total": to_buy_orderbook[2], "pre_amount": to_buy_orderbook[1], "ave_price": to_buy_orderbook[0][0]}
 				
-				temp[product_line.key] = {"ratio": (0.15/from_sell["ave_price"]*mid_buy["ave_price"]*to_buy["ave_price"]).toFixed(8), 
+				temp[product_line.key] = {"ratio": (1/from_sell["ave_price"]*mid_buy["ave_price"]*to_buy["ave_price"]).toFixed(8), 
 										  "availabe_amount": Math.min(from_sell["current_amount"], mid_buy["current_amount"]).toFixed(8), 
 										  "trade_amount": amount, "from_ave_price": from_sell["ave_price"], "mid_ave_price": mid_buy["ave_price"], "to_ave_price": to_buy["ave_price"]};
 			});
@@ -165,7 +190,7 @@ var app = new Vue({
 					}
 				}
 				to_sell = {"pre_total": to_sell_orderbook[2], "pre_amount": to_sell_orderbook[1], "ave_price": to_sell_orderbook[0][0]}
-				temp[product_line.key] = {"ratio": (0.15/to_sell["ave_price"]/mid_sell["ave_price"]*from_buy["ave_price"]).toFixed(8), 
+				temp[product_line.key] = {"ratio": (1/to_sell["ave_price"]/mid_sell["ave_price"]*from_buy["ave_price"]).toFixed(8), 
 						"availabe_amount": Math.min(from_buy["current_amount"], mid_sell["current_amount"]).toFixed(8), 
 						"trade_amount": amount, "from_ave_price": from_buy["ave_price"], "mid_ave_price": mid_sell["ave_price"], "to_ave_price": to_sell["ave_price"]};
 			});
@@ -182,6 +207,26 @@ var app = new Vue({
 		}
 	},
 	methods: {
+		init_amount: function(base_currency)
+		{
+			var initamounts = this.initamounts;
+			if(base_currency == "qash"){
+				return initamounts.qash;
+			}
+			if(base_currency == "sphtx"){
+				return initamounts.sphtx;
+			}
+			if(base_currency == "rkt"){
+				return initamounts.rkt;
+			}
+			if(base_currency == "eth"){
+				return initamounts.eth;
+			}
+			if(base_currency == "btc"){
+				return initamounts.btc;
+			}
+			return 0;
+		},
 		get_market_summary: function(orderbook,amount){
 			var market_summary;
 			for(var i =0; i<20;i++){
@@ -202,12 +247,32 @@ var app = new Vue({
 			}
 			return market_summary;
 		},
-		calculate_ratio: function(anchor,pattern,exchange_array){
+		get_amounts: function(from_amount,from_ave_price,mid_ave_price,to_ave_price,exchange_pattern){
+			var step_two_amount,step_three_amount;
+			if(exchange_pattern[0]=="buy")
+			{
+				step_two_amount = from_amount/from_ave_price;
+			}
+			if(exchange_pattern[0]=="sell")
+			{
+				step_two_amount = from_amount*from_ave_price;
+			}
+			if(exchange_pattern[1]=="buy")
+			{
+				step_three_amount = from_amount/from_ave_price;
+			}
+			if(exchange_pattern[1]=="sell")
+			{
+				step_three_amount = from_amount*from_ave_price;
+			}			
+			return [from_amount,step_two_amount,step_three_amount];
+		},
+		calculate_ratio: function(pattern,exchange_array){
 			var step_one,step_two,step_three;
-			var tmp = anchor;
+			var tmp = 1;
 			for(i=0; i<3;i++)
 			{
-				if(pattern[i] == "sell")
+				if(pattern[i] == "buy")
 				{
 					tmp = tmp/exchange_array[i]["ave_price"];
 				}else{
@@ -220,16 +285,17 @@ var app = new Vue({
 			var exchange = this.exchange_withpattern[product_line.key];
 			var scope = this;
 			console.log(product_line.key, product_line.exchange_pattern);
-			if(exchange["ratio"] > 0.1575){
+			
+			if(exchange["ratio"] >1.02 ){
 				var from_amount = exchange["trade_amount"] * 1;
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
 				var from_ave_price = exchange["from_ave_price"]*1;
 				var to_ave_price = exchange["to_ave_price"]*1;
-				var earn_amount = (from_amount * exchange["ratio"]/0.15).toFixed(8) - from_amount;
-				var trade_amounts = get_amounts(from_amount,from_ave_price,mid_ave_price,to_ave_price,product_line.exchange_pattern);
-				var from_order = {"order":{"order_type": "market", "product_id": products[product_line.from], "side": opposite_target(product_line.exchange_pattern[0]), "quantity": from_amount, "price": 0}};			
-				var mid_order = {"order":{"order_type": "market", "product_id": products[product_line.mid], "side": opposite_target(product_line.exchange_pattern[1]), "quantity": from_amount, "price": 0}};	
-				var to_order = {"order":{"order_type": "market", "product_id": products[product_line.to], "side": opposite_target(product_line.exchange_pattern[2]), "quantity": (from_amount * mid_ave_price).toFixed(8), "price": 0}};
+				var earn_amount = (from_amount * exchange["ratio"]).toFixed(8) - from_amount;
+				var trade_amounts = scope.get_amounts(from_amount,from_ave_price,mid_ave_price,to_ave_price,product_line.exchange_pattern);
+				var from_order = {"order":{"order_type": "market", "product_id": products[product_line.from], "side": product_line.exchange_pattern[0], "quantity": from_amount, "price": from_ave_price}};			
+				var mid_order = {"order":{"order_type": "market", "product_id": products[product_line.mid], "side": product_line.exchange_pattern[1], "quantity": from_amount, "price": mid_ave_price}};	
+				var to_order = {"order":{"order_type": "market", "product_id": products[product_line.to], "side": product_line.exchange_pattern[2], "quantity": (from_amount * mid_ave_price).toFixed(8), "price": to_ave_price}};
 				product_line.trade_history.push({time: this.date_string(), earning: earn_amount, type: "positive"});
 				product_line.earning = product_line.earning + earn_amount;
 				this.trade_in_sequence(from_order, mid_order, to_order, function(){
@@ -253,7 +319,7 @@ var app = new Vue({
 			var exchange = this.exchange_positive[product_line.key];
 			var scope = this;
 			console.log(product_line.key, "positive");
-			if(exchange["ratio"] > 0.1575){
+			if(exchange["ratio"] > 1.05){
 				var from_amount = exchange["trade_amount"] * 1;
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
 				var earn_amount = (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"] - from_amount * exchange["from_ave_price"];
@@ -283,7 +349,7 @@ var app = new Vue({
 			var exchange = this.exchange_negative[product_line.key];
 			var scope = this;
 			console.log(product_line.key, "negative");
-			if(exchange["ratio"] > 0.1575){
+			if(exchange["ratio"] > 1.02){
 				var from_amount = exchange["trade_amount"];
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
 				var earn_amount = from_amount * exchange["from_ave_price"] - (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"];
@@ -319,8 +385,14 @@ var app = new Vue({
 			var get_crypto_account = this.get_crypto_account;
 			trade = this.trade;
 			trade(order1, function(data_to_order){
+				console.log("order1");
+				console.log(order1);
 				trade(order2, function(data_mid_order){
+					console.log("order2");
+					console.log(order2);
 					trade(order3, function(data_from_order){
+						console.log("order3");
+						console.log(order3);
 						callback();
 					})
 				})
