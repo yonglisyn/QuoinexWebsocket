@@ -59,8 +59,8 @@ var app = new Vue({
 				var amount = scope.to_precision_decimal_ceil(to_orderbook[0][0] * 0.001 / from_orderbook[0][0] * product_line.multiplier, product_line.precision);
 				var from_exchange, mid_exchange, to_exchange;
 				
-				from_exchange = scope.getSell(from_orderbook,amount);
-				mid_exchange = scope.getBuy(mid_orderbook,amount);
+				from_exchange = scope.get_market_summary(from_orderbook,amount);
+				mid_exchange = scope.get_market_summary(mid_orderbook,amount);
 				to_exchange = {"pre_total": to_orderbook[2], "pre_amount": to_orderbook[1], "ave_price": to_orderbook[0][0]}
 				
 				temp[product_line.key] = {"ratio": (scope.calculate_ratio(0.15,product_line.exchange_pattern,[from_exchange, mid_exchange, to_exchange])).toFixed(8), 
@@ -182,8 +182,8 @@ var app = new Vue({
 		}
 	},
 	methods: {
-		getSell: function(orderbook,amount){
-			var marketSell;
+		get_market_summary: function(orderbook,amount){
+			var market_summary;
 			for(var i =0; i<20;i++){
 				if(orderbook[i][1] > amount){
 					var pre_total = 0, pre_amount = 0;
@@ -196,31 +196,11 @@ var app = new Vue({
 					}
 					var current_amount = orderbook[i][1];
 					var current_price = orderbook[i][0];
-					marketSell = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount-pre_amount) * current_price)/amount};
+					market_summary = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount-pre_amount) * current_price)/amount};
 					break;
 				}
 			}
-			return marketSell;
-		},
-		getBuy: function(orderbook,amount){
-			var marketBuy;
-			for(var i =0; i<20;i++){
-				if(orderbook[i][1] > amount){
-					var pre_total = 0, pre_amount = 0;
-					if(i==0){
-						pre_total = orderbook[i][2] * 1;
-						pre_amount = orderbook[i][1] * 1;
-					}else{
-						pre_total = orderbook[i-1][2] * 1;
-						pre_amount = orderbook[i-1][1] * 1;
-					}
-					var current_amount = orderbook[i][1];
-					var current_price = orderbook[i][0];
-					marketBuy = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount - pre_amount) * current_price)/amount};
-					break;
-				}
-			}
-			return marketBuy;
+			return market_summary;
 		},
 		calculate_ratio: function(anchor,pattern,exchange_array){
 			var step_one,step_two,step_three;
