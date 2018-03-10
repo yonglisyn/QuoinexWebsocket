@@ -30,7 +30,6 @@ class Qryptos:
         return {"sell": resp["sell_price_levels"], "buy": resp["buy_price_levels"]}
 
     def trade(self, order):
-        return
         content = self._request("/orders/", method='post', data=order, is_private=True)
         return json.loads(content)
 
