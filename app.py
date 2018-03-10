@@ -25,7 +25,6 @@ def index():
 
 @app.route('/trade', methods=['POST'])
 def trade():
-    return
     order = request.get_json()
     resp = client.trade(order)
     print(resp)
