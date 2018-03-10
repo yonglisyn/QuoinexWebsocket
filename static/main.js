@@ -4,7 +4,7 @@ var app = new Vue({
 	data: {
 		orderbooks: {},
 		//{key:"SPHTXQASH-SPHTXETH-QASHETH", from: "SPHTXQASH", mid: "SPHTXETH", to: "QASHETH", base_currency: "qash", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 9}
-		product_lines: [{key:"SPHTXETH-SPHTXQASH-QASHETH", from: "SPHTXETH", mid: "SPHTXQASH", to: "QASHETH", base_currency: "eth", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 9}]
+		product_lines: [{key:"SPHTXETH-SPHTXQASH-QASHETH", from: "sphtxeth", mid: "sphtxqash", to: "qasheth", base_currency: "eth", multiplier: 1, is_auto: false, auto_interval: 2000, trade_history:[], earning: 0, precision: 9,exchange_pattern:["sell","buy","buy"]}]
 	},
 	computed: {
 		accumulate_orderbooks: function(){
@@ -42,6 +42,89 @@ var app = new Vue({
 				}
 			}
 			return a_orderbooks;
+		},
+		getSell: function(orderbook){
+			var marketSell;
+			for(var i =0; i<20;i++){
+				if(orderbook[i][1] > amount){
+					var pre_total = 0, pre_amount = 0;
+					if(i==0){
+						pre_total = orderbook[i][2] * 1;
+						pre_amount = orderbook[i][1] * 1;
+					}else{
+						pre_total = orderbook[i-1][2] * 1;
+						pre_amount = orderbook[i-1][1] * 1;
+					}
+					var current_amount = orderbook[i][1];
+					var current_price = orderbook[i][0];
+					marketSell = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount-pre_amount) * current_price)/amount};
+					break;
+				}
+			}
+			return marketSell;
+		},
+		getBuy: function(orderbook){
+			var marketBuy;
+			for(var i =0; i<20;i++){
+				if(orderbook[i][1] > amount){
+					var pre_total = 0, pre_amount = 0;
+					if(i==0){
+						pre_total = orderbook[i][2] * 1;
+						pre_amount = orderbook[i][1] * 1;
+					}else{
+						pre_total = orderbook[i-1][2] * 1;
+						pre_amount = orderbook[i-1][1] * 1;
+					}
+					var current_amount = orderbook[i][1];
+					var current_price = orderbook[i][0];
+					mid_buy = {"pre_total": pre_total, "pre_amount": pre_amount, "current_amount": current_amount, "ave_price": (pre_total + (amount - pre_amount) * current_price)/amount};
+					break;
+				}
+			}
+			return marketBuy;
+		},
+		calculate_ratio: function(anchor,pattern,exchange_array){
+			var step_one,step_two,step_three;
+			var tmp = anchor;
+			for(i=0; i<3;i++)
+			{
+				if(pattern[i] == "sell")
+				{
+					tmp = tmp/exchange_array[i]["ave_price"];
+				}else{
+					tmp = tmp*exchange_array[i]["ave_price"];
+				}	
+			}
+			return tmp;
+		},
+		exchange_withpattern: function(exchangePattern){
+			var scope = this;
+			var temp = {};
+			this.product_lines.map(function(product_line){
+				var target ='';
+				target = exchangePattern[0];
+				var from_orderbook = scope.accumulate_orderbooks[product_line.from][target];
+				target = exchangePattern[1];
+				var mid_orderbook = scope.accumulate_orderbooks[product_line.mid][target];
+				target = exchangePattern[2];
+				var to_orderbook = scope.accumulate_orderbooks[product_line.to][target];
+
+
+				var amount = scope.to_precision_decimal_ceil(to_orderbook[0][0] * 0.001 / from_orderbook[0][0] * product_line.multiplier, product_line.precision);
+				var from_exchange, mid_exchange, to_exchange;
+				
+				from_exchange = getSell(from_orderbook);
+				
+				mid_exchange = getBuy(mid_orderbook);
+				
+				
+				to_buy = {"pre_total": to_orderbook[2], "pre_amount": to_orderbook[1], "ave_price": to_orderbook[0][0]}
+				
+				temp[product_line.key] = {"ratio": (calculate_ratio(0.15,[from_exchange, mid_exchange, to_exchange])).toFixed(8), 
+										  "availabe_amount": Math.min(from_sell["current_amount"], mid_buy["current_amount"]).toFixed(8), 
+										  "trade_amount": amount, "from_ave_price": from_sell["ave_price"], "mid_ave_price": mid_buy["ave_price"], "to_ave_price": to_buy["ave_price"]};
+			});
+			return temp;
 		},
 		exchange_positive: function(){
 			var scope = this;
@@ -90,7 +173,7 @@ var app = new Vue({
 				
 				to_buy = {"pre_total": to_buy_orderbook[2], "pre_amount": to_buy_orderbook[1], "ave_price": to_buy_orderbook[0][0]}
 				
-				temp[product_line.key] = {"ratio": (100/from_sell["ave_price"]*mid_buy["ave_price"]*to_buy["ave_price"]).toFixed(8), 
+				temp[product_line.key] = {"ratio": (0.15/from_sell["ave_price"]*mid_buy["ave_price"]*to_buy["ave_price"]).toFixed(8), 
 										  "availabe_amount": Math.min(from_sell["current_amount"], mid_buy["current_amount"]).toFixed(8), 
 										  "trade_amount": amount, "from_ave_price": from_sell["ave_price"], "mid_ave_price": mid_buy["ave_price"], "to_ave_price": to_buy["ave_price"]};
 			});
@@ -139,7 +222,7 @@ var app = new Vue({
 					}
 				}
 				to_sell = {"pre_total": to_sell_orderbook[2], "pre_amount": to_sell_orderbook[1], "ave_price": to_sell_orderbook[0][0]}
-				temp[product_line.key] = {"ratio": (100/to_sell["ave_price"]/mid_sell["ave_price"]*from_buy["ave_price"]).toFixed(8), 
+				temp[product_line.key] = {"ratio": (0.15/to_sell["ave_price"]/mid_sell["ave_price"]*from_buy["ave_price"]).toFixed(8), 
 						"availabe_amount": Math.min(from_buy["current_amount"], mid_sell["current_amount"]).toFixed(8), 
 						"trade_amount": amount, "from_ave_price": from_buy["ave_price"], "mid_ave_price": mid_sell["ave_price"], "to_ave_price": to_sell["ave_price"]};
 			});
@@ -156,11 +239,12 @@ var app = new Vue({
 		}
 	},
 	methods: {
+		
 		positive_trade: function(product_line){
 			var exchange = this.exchange_positive[product_line.key];
 			var scope = this;
 			console.log(product_line.key, "positive");
-			if(exchange["ratio"] > 100.1){
+			if(exchange["ratio"] > 0.1575){
 				var from_amount = exchange["trade_amount"] * 1;
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
 				var earn_amount = (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"] - from_amount * exchange["from_ave_price"];
@@ -190,7 +274,7 @@ var app = new Vue({
 			var exchange = this.exchange_negative[product_line.key];
 			var scope = this;
 			console.log(product_line.key, "negative");
-			if(exchange["ratio"] > 100.1){
+			if(exchange["ratio"] > 0.1575){
 				var from_amount = exchange["trade_amount"];
 				var mid_ave_price = exchange["mid_ave_price"] * 1;
 				var earn_amount = from_amount * exchange["from_ave_price"] - (from_amount * mid_ave_price).toFixed(8) * exchange["to_ave_price"];
