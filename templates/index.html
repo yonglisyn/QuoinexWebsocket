@@ -36,35 +36,25 @@
 						</div>
 					</div>
 					<div class="row align-middle">
-						<div class="col-md-2 text-center">Positive v2</div>
+						<div class="col-md-2 text-center">Pattern trade</div>
 						<div class="col-md-3 text-center" v-text="exchange_withpattern[product_line.key]['ratio']" 
-							v-bind:class="{'bg-success text-red': exchange_withpattern[product_line.key]['ratio'] > 0.1575, 'bg-warning text-white': exchange_positive[product_line.key]['ratio'] <= 0.1575}"></div>
+							v-bind:class="{'bg-success text-red': exchange_withpattern[product_line.key]['ratio'] > 1.01, 'bg-warning text-white': exchange_positive[product_line.key]['ratio'] <= 1.01}"></div>
 						<div class="col-md-3 text-center" v-text="exchange_withpattern[product_line.key]['availabe_amount']"></div>
 						<div class="col-md-2 text-center" v-text="exchange_withpattern[product_line.key]['trade_amount']"></div>
 						<div class="col-md-2">
 							<div class="btn btn-danger" v-on:click="pattern_trade(product_line)">Pattern Trade</div>
 						</div>
 					</div>
-					<div class="row align-middle">
+					<!-- <div class="row align-middle">
 						<div class="col-md-2 text-center">Positive</div>
 						<div class="col-md-3 text-center" v-text="exchange_positive[product_line.key]['ratio']" 
-							v-bind:class="{'bg-success text-red': exchange_positive[product_line.key]['ratio'] > 0.1575, 'bg-warning text-white': exchange_positive[product_line.key]['ratio'] <= 0.1575}"></div>
+							v-bind:class="{'bg-success text-red': exchange_positive[product_line.key]['ratio'] > 1.01, 'bg-warning text-white': exchange_positive[product_line.key]['ratio'] <= 1.01}"></div>
 						<div class="col-md-3 text-center" v-text="exchange_positive[product_line.key]['availabe_amount']"></div>
 						<div class="col-md-2 text-center" v-text="exchange_positive[product_line.key]['trade_amount']"></div>
 						<div class="col-md-2">
 							<div class="btn btn-danger" v-on:click="positive_trade(product_line)">Trade</div>
 						</div>
-					</div>
-					<div class="row align-middle" style="margin-top: 5px;">
-						<div class="col-md-2 text-center">Negative</div>
-						<div class="col-md-3 text-center" v-text="exchange_negative[product_line.key]['ratio']" 
-							v-bind:class="{'bg-success text-red': exchange_negative[product_line.key]['ratio'] > 0.1575, 'bg-warning text-white': exchange_negative[product_line.key]['ratio'] <= 0.1575}"></div>
-						<div class="col-md-3 text-center" v-text="exchange_negative[product_line.key]['availabe_amount']"></div>
-						<div class="col-md-2 text-center" v-text="exchange_negative[product_line.key]['trade_amount']"></div>
-						<div class="col-md-2">
-							<div class="btn btn-danger" v-on:click="negative_trade(product_line)">Trade</div>
-						</div>
-					</div>
+					</div> -->
 					<div class="row mt-4">
 						<div class="col" style="height: 280px; overflow-y: scroll;">
 							<div class="row">
